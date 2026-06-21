@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>六舱鱼池过滤系统工程模型</title>
+  <style>
+    :root {
+      --bg: #07111d;
+      --panel: rgba(11, 25, 40, .9);
+      --panel-2: rgba(16, 39, 60, .92);
+      --line: rgba(160, 220, 255, .28);
+      --text: #eefaff;
+      --muted: #9dbbd0;
+      --blue: #4bd5ff;
+      --green: #73f5ad;
+      --amber: #ffd166;
+      --red: #ff6b6b;
+      --mud: #9b6a37;
+      --steel: #9fb7c7;
+      --water: rgba(35, 163, 219, .72);
+      --shadow: 0 28px 80px rgba(0,0,0,.38);
+      font-family: "Inter", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 8% 10%, rgba(75, 213, 255, .22), transparent 34rem),
+        radial-gradient(circle at 90% 0%, rgba(115, 245, 173, .14), transparent 32rem),
+        linear-gradient(135deg, #050b13, var(--bg) 48%, #08263a);
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: linear-gradient(to bottom, #000, transparent 82%);
+    }
+
+    header, main { position: relative; z-index: 1; }
+    header {
+      padding: 34px clamp(16px, 4vw, 56px) 14px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 22px;
+      align-items: end;
+    }
+    h1 { margin: 0 0 10px; font-size: clamp(2rem, 5vw, 4.7rem); line-height: .98; letter-spacing: -.06em; }
+    .lead { margin: 0; color: var(--muted); max-width: 930px; line-height: 1.75; font-size: clamp(.98rem, 1.4vw, 1.18rem); }
+    .badge {
+      border: 1px solid rgba(115,245,173,.35);
+      background: rgba(115,245,173,.1);
+      color: #caffdf;
+      padding: 12px 16px;
+      border-radius: 999px;
+      white-space: nowrap;
+      box-shadow: var(--shadow);
+    }
+
+    main { padding: 8px clamp(16px, 4vw, 56px) 50px; display: grid; gap: 18px; }
+    .toolbar, .card, .step, .detail-panel { border: 1px solid var(--line); background: var(--panel); border-radius: 24px; box-shadow: var(--shadow); backdrop-filter: blur(18px); }
+    .toolbar { padding: 14px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+    button {
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 999px;
+      padding: 10px 14px;
+      color: var(--text);
+      background: rgba(255,255,255,.08);
+      cursor: pointer;
+      font-weight: 800;
+      transition: transform .18s ease, background .18s ease, border-color .18s ease;
+    }
+    button:hover { transform: translateY(-1px); border-color: rgba(75,213,255,.7); }
+    button.active { color: #031724; background: linear-gradient(135deg, var(--blue), var(--green)); border-color: transparent; }
+    .legend { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: .9rem; }
+    .legend span::before { content: ""; display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: stretch; }
+    .model-card { padding: 16px; min-height: 680px; overflow: hidden; }
+    .model-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 12px; color: var(--muted); }
+    .model-head strong { color: var(--text); }
+    .drawing-wrap { position: relative; min-height: 610px; border-radius: 20px; overflow: hidden; background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015)); border: 1px solid rgba(255,255,255,.08); }
+    svg { display: block; width: 100%; height: 610px; }
+    .clickable { cursor: pointer; transition: filter .2s ease, opacity .2s ease; }
+    .clickable:hover, .clickable.active { filter: drop-shadow(0 0 12px rgba(115,245,173,.95)); }
+    .label { font-size: 14px; font-weight: 800; fill: #ecfbff; pointer-events: none; }
+    .small-label { font-size: 11px; fill: #bdd7e7; pointer-events: none; }
+    .tiny-label { font-size: 9px; fill: #d8edf7; pointer-events: none; }
+    .tank-shell { fill: #16334a; stroke: #89cbe9; stroke-width: 2; }
+    .tank-face { fill: #10283d; stroke: rgba(137,203,233,.5); stroke-width: 1.4; }
+    .water { fill: var(--water); stroke: rgba(184,243,255,.75); stroke-width: 1; }
+    .glass { fill: rgba(255,255,255,.05); stroke: rgba(255,255,255,.14); }
+    .baffle { fill: #b9cad5; stroke: #edf8ff; stroke-width: 1; }
+    .media { fill: rgba(115,245,173,.18); stroke: rgba(115,245,173,.65); }
+    .brush { stroke: #ffd166; stroke-width: 3; stroke-linecap: round; }
+    .foam-coarse { fill: rgba(255,209,102,.35); stroke: rgba(255,209,102,.8); }
+    .foam-fine { fill: rgba(75,213,255,.28); stroke: rgba(75,213,255,.8); }
+    .pipe-main { fill: none; stroke: #55d7ff; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; opacity: .72; }
+    .pipe-waste { fill: none; stroke: #a4774b; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; opacity: .78; }
+    .pipe-air { fill: none; stroke: #d8f6ff; stroke-width: 3; stroke-dasharray: 8 7; stroke-linecap: round; opacity: .82; }
+    .pipe-return { fill: none; stroke: #73f5ad; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
+    .flow { fill: none; stroke: #e9fbff; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 14 16; animation: dash 1.3s linear infinite; }
+    .flow.waste { stroke: #ffd099; animation-duration: .9s; opacity: 0; }
+    .mode-clean .flow.waste { opacity: 1; }
+    .mode-clean .normal-only { opacity: .22; }
+    .mode-clog .clog-warning { opacity: 1; }
+    .mode-section .top-extra { opacity: .32; }
+    .mode-plan .section-extra { opacity: .25; }
+    .clog-warning { opacity: 0; transition: opacity .2s; }
+    @keyframes dash { to { stroke-dashoffset: -72; } }
+    .poop { fill: var(--mud); stroke: #563315; stroke-width: .8; animation: drift 4s ease-in-out infinite; }
+    .mode-clean .poop { animation-duration: 1.8s; }
+    .mode-clog .poop { fill: #ff9b4a; }
+    @keyframes drift { 50% { transform: translate(7px, 4px); } }
+    .bubble { fill: rgba(232,250,255,.7); animation: bubble 2.2s ease-in-out infinite; }
+    @keyframes bubble { 50% { transform: translateY(-12px); opacity: .35; } }
+    .mud { fill: rgba(155,106,55,.72); }
+    .arrow { fill: #e9fbff; }
+
+    .detail-panel { padding: 18px; display: grid; align-content: start; gap: 14px; }
+    .detail-panel h2 { margin: 0; letter-spacing: -.03em; }
+    .detail-panel p { margin: 0; color: var(--muted); line-height: 1.65; }
+    .mini-diagram { border-radius: 18px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); min-height: 210px; padding: 10px; }
+    .kv { display: grid; gap: 9px; }
+    .kv div { display: grid; grid-template-columns: 86px 1fr; gap: 10px; border-top: 1px solid rgba(255,255,255,.08); padding-top: 9px; color: var(--muted); }
+    .kv strong { color: var(--text); }
+    .notice { padding: 12px 13px; border-radius: 16px; color: #ffe4a3; background: rgba(255,209,102,.12); border: 1px solid rgba(255,209,102,.28); line-height: 1.55; }
+
+    .steps { display: grid; grid-template-columns: repeat(7, minmax(120px, 1fr)); gap: 10px; }
+    .step { padding: 13px; min-height: 122px; }
+    .step b { display: block; color: var(--green); margin-bottom: 7px; }
+    .step span { color: var(--muted); line-height: 1.45; font-size: .92rem; }
+    .scheme { padding: 18px; color: var(--muted); line-height: 1.75; }
+    .scheme strong { color: var(--text); }
+
+    @media (max-width: 1120px) { .layout { grid-template-columns: 1fr; } .detail-panel { grid-template-columns: 1fr 1fr; } .steps { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 760px) { header { grid-template-columns: 1fr; } .detail-panel { grid-template-columns: 1fr; } .steps { grid-template-columns: 1fr; } svg { height: 720px; } .drawing-wrap { min-height: 720px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <section>
+      <h1>六舱鱼池过滤系统<br />工程剖面模型</h1>
+      <p class="lead">以工程剖面 + 俯视关系混合呈现锦鲤池底吸、沉淀、毛刷、藤棉、生化、清水与拔管排污。点击任一仓体、翻板、管路或设备，可查看专属放大图、鱼粪状态、清洗方式和常见问题。</p>
+    </section>
+    <div class="badge" id="modeBadge">当前：正常循环</div>
+  </header>
+
+  <main>
+    <nav class="toolbar" aria-label="模式与图例">
+      <div class="tabs">
+        <button class="active" data-mode="normal">正常运行</button>
+        <button data-mode="clean">排污清洗</button>
+        <button data-mode="clog">堵塞预警</button>
+        <button data-mode="plan">俯视管路</button>
+        <button data-mode="section">剖面结构</button>
+      </div>
+      <div class="legend">
+        <span style="--c:#55d7ff">主水路</span>
+        <span style="--c:#73f5ad">回水管</span>
+        <span style="--c:#a4774b">排污管</span>
+        <span style="--c:#d8f6ff">曝气管</span>
+        <span style="--c:#9b6a37">鱼粪/沉渣</span>
+      </div>
+    </nav>
+
+    <section class="layout">
+      <article class="card model-card">
+        <div class="model-head"><strong>大型工程模型</strong><span id="modeHint">水从池底进入沉淀仓，上清液逐级翻板/过水，最终由清水仓水泵回池。</span></div>
+        <div class="drawing-wrap" id="modelShell">
+          <svg viewBox="0 0 1200 680" role="img" aria-label="六舱鱼池过滤系统工程模型">
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" class="arrow" /></marker>
+              <linearGradient id="depth" x1="0" x2="1"><stop offset="0" stop-color="#193b55"/><stop offset="1" stop-color="#0f263a"/></linearGradient>
+            </defs>
+
+            <g class="clickable" data-id="pond">
+              <path d="M54 122 L242 86 L315 127 L315 326 L125 370 L54 318 Z" fill="url(#depth)" stroke="#8bd7f7" stroke-width="2" />
+              <path class="water" d="M69 148 L241 116 L299 147 L126 184 Z" />
+              <path class="mud" d="M88 294 L126 312 L282 275 L296 290 L126 338 L70 304 Z" />
+              <text class="label" x="100" y="115">锦鲤池</text>
+              <text class="small-label" x="78" y="345">池底沉渣区 / 底吸口</text>
+              <circle cx="118" cy="294" r="10" fill="#09131e" stroke="#55d7ff" stroke-width="3" />
+              <circle class="poop" cx="100" cy="260" r="5"/><circle class="poop" cx="135" cy="275" r="4"/><circle class="poop" cx="170" cy="266" r="3"/>
+            </g>
+
+            <path class="pipe-main clickable normal-only" data-id="bottom-drain" d="M118 294 C180 420 268 445 356 420" marker-end="url(#arrow)" />
+            <path class="flow normal-only" d="M118 294 C180 420 268 445 356 420" />
+            <text class="small-label" x="175" y="414">锦鲤池底吸管：池底 → 沉淀仓下部进水</text>
+
+            <g id="filterBlock" transform="translate(330 126)">
+              <path d="M0 30 L735 30 L790 70 L790 438 L54 438 L0 398 Z" fill="#0c2133" stroke="#8bd7f7" stroke-width="2" />
+              <path d="M0 30 L54 70 L790 70 L735 30 Z" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.14)" />
+              <line x1="122" y1="70" x2="122" y2="438" stroke="#8bd7f7" stroke-width="2" />
+              <line x1="244" y1="70" x2="244" y2="438" stroke="#8bd7f7" stroke-width="2" />
+              <line x1="366" y1="70" x2="366" y2="438" stroke="#8bd7f7" stroke-width="2" />
+              <line x1="488" y1="70" x2="488" y2="438" stroke="#8bd7f7" stroke-width="2" />
+              <line x1="610" y1="70" x2="610" y2="438" stroke="#8bd7f7" stroke-width="2" />
+
+              <g class="section-extra"><line x1="24" y1="118" x2="760" y2="118" stroke="#b7f2ff" stroke-width="2" stroke-dasharray="10 7"/><text class="small-label" x="635" y="110">运行水位线</text></g>
+
+              <g class="clickable" data-id="settle">
+                <rect class="tank-face" x="8" y="72" width="112" height="366" />
+                <path class="water" d="M10 120 H118 V405 Q62 430 10 405 Z" />
+                <path class="mud" d="M20 396 Q62 373 110 396 V424 H20 Z" />
+                <path class="baffle" d="M30 142 H48 V356 H30 Z"/><text class="tiny-label" x="52" y="176">导流板</text>
+                <path d="M14 422 L58 388 L118 422" fill="none" stroke="#9fb7c7" stroke-width="2"/><text class="tiny-label" x="24" y="414">坡底集污坑</text>
+                <circle cx="66" cy="425" r="7" fill="#1a0f08" stroke="#a4774b" stroke-width="3" />
+                <text class="label" x="24" y="94">沉淀仓</text>
+                <text class="tiny-label" x="24" y="135">下部进水 / 缓流</text>
+                <circle class="poop" cx="48" cy="345" r="5"/><circle class="poop" cx="74" cy="365" r="4"/><circle class="poop" cx="94" cy="386" r="3"/>
+              </g>
+
+              <g class="clickable" data-id="baffle-settle-brush">
+                <path class="baffle" d="M122 118 H140 V380 H122 Z" />
+                <path class="water" d="M123 118 H140 V152 H123 Z" />
+                <text class="tiny-label" x="128" y="103">上部溢流翻板</text>
+              </g>
+
+              <g class="clickable" data-id="brush">
+                <rect class="tank-face" x="130" y="72" width="112" height="366" />
+                <path class="water" d="M132 124 H240 V410 H132 Z" />
+                <line x1="150" y1="150" x2="225" y2="150" stroke="#e9fbff" stroke-width="4"/><text class="tiny-label" x="151" y="139">毛刷悬挂杆</text>
+                <g>
+                  <line class="brush" x1="155" y1="155" x2="150" y2="330"/><line class="brush" x1="170" y1="155" x2="174" y2="334"/><line class="brush" x1="188" y1="155" x2="184" y2="330"/><line class="brush" x1="205" y1="155" x2="210" y2="333"/><line class="brush" x1="222" y1="155" x2="216" y2="330"/>
+                </g>
+                <circle class="poop" cx="166" cy="240" r="4"/><circle class="poop" cx="206" cy="268" r="4"/><circle class="poop" cx="188" cy="315" r="3"/>
+                <circle cx="188" cy="425" r="7" fill="#1a0f08" stroke="#a4774b" stroke-width="3" />
+                <text class="label" x="152" y="94">毛刷仓</text>
+                <text class="tiny-label" x="151" y="385">大颗粒/藻丝挂附</text>
+              </g>
+
+              <g class="clickable" data-id="baffle-brush-foam">
+                <path class="baffle" d="M244 78 H262 V350 H244 Z" /><path class="baffle" d="M262 158 H274 V438 H262 Z" />
+                <text class="tiny-label" x="246" y="61">折流：上进下出</text>
+              </g>
+
+              <g class="clickable" data-id="foam">
+                <rect class="tank-face" x="252" y="72" width="112" height="366" />
+                <path class="water" d="M254 128 H362 V410 H254 Z" />
+                <rect class="foam-coarse" x="278" y="155" width="28" height="190" rx="6"/><rect class="foam-fine" x="314" y="155" width="28" height="190" rx="6"/>
+                <text class="tiny-label" x="274" y="143">粗棉</text><text class="tiny-label" x="313" y="143">细棉</text>
+                <line class="clog-warning" x1="256" y1="105" x2="310" y2="105" stroke="#ff6b6b" stroke-width="4"/><line class="clog-warning" x1="320" y1="132" x2="360" y2="132" stroke="#ff6b6b" stroke-width="4"/><text class="tiny-label clog-warning" x="260" y="96" fill="#ffc2c2">堵塞水位差</text>
+                <circle class="poop" cx="284" cy="250" r="2.8"/><circle class="poop" cx="326" cy="290" r="2.5"/><circle class="poop" cx="300" cy="325" r="2.2"/>
+                <circle cx="310" cy="425" r="7" fill="#1a0f08" stroke="#a4774b" stroke-width="3" />
+                <text class="label" x="274" y="94">藤棉仓</text>
+                <text class="tiny-label" x="270" y="382">细屑截留 / 分层清洗</text>
+              </g>
+
+              <g class="clickable" data-id="baffle-foam-bio">
+                <path class="baffle" d="M366 118 H384 V438 H366 Z"/><path class="water" d="M366 355 H384 V406 H366 Z"/><text class="tiny-label" x="367" y="103">下部过水翻板</text>
+              </g>
+
+              <g class="clickable" data-id="bio">
+                <rect class="tank-face" x="374" y="72" width="112" height="366" />
+                <path class="water" d="M376 125 H484 V410 H376 Z" />
+                <rect class="media" x="392" y="172" width="76" height="150" rx="10"/>
+                <g fill="rgba(115,245,173,.7)"><circle cx="405" cy="190" r="7"/><circle cx="430" cy="205" r="6"/><circle cx="456" cy="190" r="7"/><circle cx="416" cy="235" r="7"/><circle cx="449" cy="248" r="6"/><circle cx="428" cy="288" r="7"/></g>
+                <ellipse cx="430" cy="365" rx="42" ry="9" fill="none" stroke="#e8fbff" stroke-width="3"/><text class="tiny-label" x="394" y="350">曝气盘</text>
+                <circle class="bubble" cx="405" cy="336" r="3"/><circle class="bubble" cx="430" cy="315" r="3"/><circle class="bubble" cx="455" cy="335" r="3"/>
+                <circle cx="432" cy="425" r="7" fill="#1a0f08" stroke="#a4774b" stroke-width="3" />
+                <text class="label" x="396" y="94">生化仓</text>
+                <text class="tiny-label" x="388" y="141">氨氮转化，不作沉渣仓</text>
+              </g>
+
+              <g class="clickable" data-id="screen-bio-clear">
+                <rect class="baffle" x="488" y="94" width="18" height="326"/><g stroke="#10283d" stroke-width="1"><line x1="492" y1="105" x2="502" y2="417"/><line x1="502" y1="105" x2="492" y2="417"/></g><text class="tiny-label" x="486" y="78">隔网防滤材漂出</text>
+              </g>
+
+              <g class="clickable" data-id="clear">
+                <rect class="tank-face" x="496" y="72" width="112" height="366" />
+                <path class="water" d="M498 123 H606 V410 H498 Z" />
+                <rect x="526" y="318" width="48" height="44" rx="10" fill="#18202b" stroke="#d7e7f0" stroke-width="2"/><circle cx="550" cy="340" r="13" fill="#2b3d4e" stroke="#73f5ad" stroke-width="3"/><text class="tiny-label" x="519" y="306">水泵吸入口</text>
+                <line x1="510" y1="190" x2="594" y2="190" stroke="#ff6b6b" stroke-width="3" stroke-dasharray="7 6"/><text class="tiny-label" x="514" y="181">低水位保护线</text>
+                <rect x="516" y="140" width="56" height="12" rx="6" fill="#705cff" stroke="#dcd7ff"/><text class="tiny-label" x="515" y="133">可选 UV/加热</text>
+                <circle cx="554" cy="425" r="7" fill="#1a0f08" stroke="#a4774b" stroke-width="3" />
+                <text class="label" x="518" y="94">清水仓</text>
+                <text class="tiny-label" x="520" y="384">基本无鱼粪，只回水</text>
+              </g>
+
+              <g class="clickable" data-id="standpipe">
+                <rect class="tank-face" x="622" y="72" width="150" height="366" />
+                <path class="water" d="M624 210 H770 V410 H624 Z" opacity=".25" />
+                <path class="pipe-waste" d="M656 410 V170"/><path class="pipe-waste" d="M708 410 V138"/><path class="pipe-waste" d="M742 410 V225"/>
+                <path class="flow waste" d="M656 210 V390"/><path class="flow waste" d="M708 170 V390"/><path class="flow waste" d="M742 250 V390"/>
+                <rect x="636" y="418" width="118" height="16" rx="8" fill="#5b3a22"/><text class="label" x="640" y="94">拔管舱</text>
+                <text class="tiny-label" x="633" y="116">日常关闭；清洗时拔管/开阀</text>
+                <text class="tiny-label" x="632" y="456">排水沟 / 市政排水方向 →</text>
+              </g>
+
+              <g class="top-extra clickable" data-id="return-pipe">
+                <path class="pipe-return" d="M552 322 C552 40 850 40 850 -20 C850 -80 -155 -70 -210 88" marker-end="url(#arrow)" />
+                <path class="flow" d="M552 322 C552 40 850 40 850 -20 C850 -80 -155 -70 -210 88" />
+                <rect x="577" y="50" width="36" height="20" rx="8" fill="#112" stroke="#73f5ad"/><text class="tiny-label" x="577" y="44">止回阀/活接</text>
+                <text class="small-label" x="620" y="18">水泵回水主管 → 回水口/瀑布/射流，含防虹吸孔</text>
+              </g>
+
+              <g class="clickable" data-id="waste-main">
+                <path class="pipe-waste" d="M66 425 H188 H310 H432 H554 H697" marker-end="url(#arrow)" />
+                <path class="flow waste" d="M66 425 H188 H310 H432 H554 H697" />
+                <text class="small-label" x="228" y="458">各仓底排管 → 排污总管 → 拔管舱</text>
+              </g>
+
+              <g class="clickable" data-id="air-main">
+                <path class="pipe-air" d="M430 365 C430 475 290 488 250 532" marker-end="url(#arrow)" />
+                <path class="pipe-air" d="M252 532 H600" />
+                <text class="small-label" x="268" y="526">曝气主管与生化仓气盘支管</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+      </article>
+
+      <aside class="detail-panel" aria-live="polite">
+        <div>
+          <h2 id="detailTitle">沉淀仓</h2>
+          <p id="detailSummary">底吸管从池底带入完整颗粒、残饵与沉底污物；沉淀仓扩大截面降低水速，让大颗粒留在仓底。</p>
+        </div>
+        <div class="mini-diagram" id="miniDiagram"></div>
+        <div class="kv">
+          <div><strong>水流方向</strong><span id="detailFlow">下部进水 → 缓流沉降 → 上部溢流翻板</span></div>
+          <div><strong>鱼粪变化</strong><span id="detailWaste">完整颗粒沉入集污坑，避免短路进入毛刷仓。</span></div>
+          <div><strong>清洗方法</strong><span id="detailClean">停泵或降流，打开底排/拔管，先排沉泥再恢复水位。</span></div>
+          <div><strong>常见问题</strong><span id="detailProblem">进水直冲下一仓会带走沉渣，应设置导流板和足够缓流区。</span></div>
+        </div>
+        <div class="notice" id="modeNotice">正常运行：排污总管关闭，水流按蓝色主水路和绿色回水管循环。</div>
+      </aside>
+    </section>
+
+    <section class="steps" aria-label="完整工艺步骤">
+      <div class="step"><b>1. 底吸收污</b><span>锦鲤池底部沉渣、残饵和完整颗粒鱼粪由底吸口进入沉淀仓。</span></div>
+      <div class="step"><b>2. 沉淀留泥</b><span>沉淀仓降低水速，大颗粒沉入坡底集污坑并定期底排。</span></div>
+      <div class="step"><b>3. 毛刷粗滤</b><span>未沉降的大颗粒、藻丝和残饵被毛刷挂住，可提刷冲洗。</span></div>
+      <div class="step"><b>4. 藤棉细滤</b><span>粗棉、细棉分层截留细小悬浮物，堵塞时形成水位差。</span></div>
+      <div class="step"><b>5. 生化转化</b><span>细菌屋/K1/陶瓷环配合曝气盘，为硝化菌转化氨氮提供条件。</span></div>
+      <div class="step"><b>6. 清水回流</b><span>清水仓水泵经止回阀、活接和回水主管送回鱼池。</span></div>
+      <div class="step"><b>7. 拔管排污</b><span>各仓底排汇入排污总管，清洗时进入拔管舱并排向排水沟。</span></div>
+    </section>
+
+    <article class="card scheme">
+      <strong>整体方案说明：</strong>锦鲤池底部的鱼粪、残饵和沉渣通过底吸口进入沉淀仓。沉淀仓通过扩大水体截面降低水速，使大颗粒鱼粪沉入仓底，并通过底排管定期排出。上层相对清水经翻板进入毛刷仓，毛刷拦截未沉降的大颗粒、藻丝和残饵。随后水流进入藤棉仓，藤棉分层截留细小悬浮物。经过机械过滤后的水进入生化仓，生化滤材和曝气系统为硝化菌提供附着面和氧气，将氨氮逐步转化为亚硝酸盐和硝酸盐。最后，清水进入清水仓，由水泵通过回水管送回锦鲤池。各仓底部排污管汇入排污总管，最终进入拔管舱。清洗时通过拔管或开阀，使沉泥和冲洗污水直接排走，避免污水倒流进入清水仓或鱼池。
+    </article>
+  </main>
+
+  <script>
+    const details = {
+      pond: ['锦鲤池与底吸口', '鱼粪、残饵和沉底污物在池底聚集，底吸口把完整颗粒带入过滤系统。', '池底 → 底吸管 → 沉淀仓下部', '完整颗粒/残饵仍未破碎，应尽快进入沉淀区。', '检查底吸口防堵罩，避免大叶片或异物进入管道。', '底吸口太高会吸不到沉渣；太小会流速过大影响鱼。'],
+      'bottom-drain': ['锦鲤池底吸管', '连接鱼池底部与沉淀仓下部进水口，是主水路的第一段。', '池底负压吸入 → 管道低位输送 → 沉淀仓缓流区', '鱼粪保持大颗粒状态，进入沉淀仓后更容易沉降。', '检修时降低水位或关闭阀门，防止倒灌。', '弯头过多会减小流量；无检修口时堵塞难处理。'],
+      settle: ['沉淀仓', '通过扩大水体截面降低水速，让大颗粒鱼粪沉入坡底集污坑。', '下部进水 → 导流板减速 → 上部溢流翻板', '完整颗粒沉入仓底，防止被直接冲进毛刷仓。', '停泵或降流，打开底排管/拔管立管，先排浓泥。', '缺少导流板会短路；仓底无坡度会留下死角。'],
+      'baffle-settle-brush': ['沉淀→毛刷上部溢流翻板', '只允许相对清水从上层进入毛刷仓，避免仓底沉渣被带走。', '沉淀仓上层 → 翻板上口 → 毛刷仓', '沉渣留在沉淀仓底部，少量悬浮大颗粒进入毛刷。', '清洗沉淀仓时可临时隔离下一仓，避免污水倒流。', '翻板口太低会卷走沉泥；太窄会抬高水位。'],
+      brush: ['毛刷仓', '毛刷悬挂在横杆上，水流穿过刷毛区，拦截大颗粒鱼粪、藻丝和残饵。', '上部进入 → 穿过毛刷阵列 → 折流进入藤棉仓', '未沉降的大颗粒被挂附在刷毛上，可提起冲洗。', '提刷到清洗区冲洗，污水必须排入排污总管，不回流生化仓。', '毛刷长期不洗会腐败耗氧，并把大颗粒打碎成细屑。'],
+      'baffle-brush-foam': ['毛刷→藤棉折流翻板', '采用上进下出/折流方式，让水必须穿过滤材前缘，减少短路。', '毛刷仓上层 → 翻板折流 → 藤棉仓侧向均流', '颗粒进一步被拦截，进入藤棉仓的主要是细屑。', '清洗毛刷时关闭或隔离翻板，防止污水倒入藤棉。', '翻板漏缝过大时水会绕过滤棉。'],
+      foam: ['藤棉仓', '粗棉、细棉分层布置，水从一侧均匀穿过，截留细小悬浮物。', '侧向均流 → 粗棉 → 细棉 → 下部过水翻板', '细碎悬浮物被分层截留，堵塞后上游水位升高。', '分批清洗滤棉，污水走底排，不倒入生化仓。', '一次性洗得太干净会破坏成熟微生物膜并造成水质波动。'],
+      'baffle-foam-bio': ['藤棉→生化下部过水翻板', '把机械过滤后的水从下部导入生化仓，形成稳定穿流。', '藤棉出水 → 下部过水口 → 生化仓滤材区', '此处不应再有大量鱼粪，否则生化仓会变成沉渣仓。', '清洗藤棉时应隔离，避免污水冲入生化滤材。', '过水口堵塞会导致藤棉仓水位差快速增大。'],
+      bio: ['生化仓', '细菌屋/K1/陶瓷环等滤材配合曝气盘，为硝化菌转化氨氮提供附着面与氧气。', '下部进水 → 穿过滤材与曝气区 → 经隔网到清水仓', '不应有大量鱼粪；重点是氨氮、亚硝酸盐转化。', '只轻排底部沉积，不频繁大清洗滤材。', '停气或大洗滤材会削弱硝化系统，引起氨氮波动。'],
+      'screen-bio-clear': ['生化→清水隔网', '隔网防止 K1、陶瓷环等滤材漂入清水仓和水泵。', '生化仓上清水 → 隔网 → 清水仓', '清水仓应基本无鱼粪和滤材碎片。', '定期刷洗隔网表面，保持过水面积。', '隔网过密会堵，过稀会跑滤材。'],
+      clear: ['清水仓', '水泵吸入口位于清水区，配低水位保护、止回阀/活接，可选 UV、加热棒或回水分流。', '清水仓 → 水泵 → 回水主管 → 鱼池回水口/瀑布/射流', '应基本无鱼粪；若出现粪便说明前级机械过滤失效。', '检修水泵前关闭阀门，必要时通过检修排空管放水。', '水位过低会导致水泵空转；止回阀缺失会停泵倒灌。'],
+      standpipe: ['拔管舱', '各仓底排接入排污总管，拔管舱通过立管控制日常关闭与清洗排放。', '各仓底排 → 排污总管 → 拔管立管 → 排水沟/市政排水', '清洗时沉泥和冲洗污水集中排出，不进入清水仓。', '按仓逐个拔管或开阀，先沉淀、后毛刷、再藤棉，最后必要时轻排生化。', '排水口低于外部水位时需防倒灌，不能与清水仓直通。'],
+      'waste-main': ['排污总管', '沉淀、毛刷、藤棉、生化、清水检修排空统一汇入排污总管。', '各仓底排点 → 总管坡向 → 拔管舱', '正常关闭；清洗时带走沉泥、挂附污物和冲洗水。', '保持管道坡度，排污后补水并恢复立管/阀门。', '总管无坡度会积泥发臭，清水仓排空需防倒灌。'],
+      'air-main': ['曝气主管', '空气主管向生化仓气盘供气，提高溶氧并让滤材区保持活性。', '气泵 → 曝气主管 → 生化仓气盘支管', '不处理颗粒鱼粪，主要服务硝化菌需氧。', '检查止逆阀和气盘堵塞，避免停电虹吸回水。', '曝气太弱会降低硝化效率，太强可能扰动沉积物。'],
+      'return-pipe': ['水泵回水管', '清水仓水泵经止回阀、活接和回水主管送回锦鲤池，可接瀑布、射流或分流。', '清水仓水泵 → 止回阀/活接 → 防虹吸孔 → 回水口', '回水应清澈无可见鱼粪。', '检修前断电并关闭阀门；定期检查止回阀。', '无防虹吸孔时停泵可能倒吸；回水太强会扰动鱼池底泥。']
+    };
+
+    const miniTemplates = {
+      settle: '<svg viewBox="0 0 340 210"><rect x="40" y="25" width="250" height="160" rx="12" fill="#12334c" stroke="#8bd7f7"/><path d="M55 70H275V165Q160 190 55 165Z" fill="rgba(35,163,219,.65)"/><rect x="78" y="58" width="18" height="92" fill="#b9cad5"/><path d="M70 170Q160 130 270 170" fill="#9b6a37"/><text x="112" y="54" fill="#eefaff" font-size="14">导流缓流 + 坡底集污</text><circle cx="170" cy="171" r="8" fill="#111" stroke="#a4774b" stroke-width="4"/></svg>',
+      brush: '<svg viewBox="0 0 340 210"><rect x="45" y="25" width="250" height="160" rx="12" fill="#12334c" stroke="#8bd7f7"/><path d="M60 65H280V170H60Z" fill="rgba(35,163,219,.65)"/><line x1="85" y1="60" x2="255" y2="60" stroke="#eefaff" stroke-width="5"/><g stroke="#ffd166" stroke-width="5"><line x1="100" y1="65" x2="92" y2="155"/><line x1="135" y1="65" x2="142" y2="158"/><line x1="170" y1="65" x2="164" y2="156"/><line x1="205" y1="65" x2="212" y2="158"/><line x1="240" y1="65" x2="232" y2="155"/></g><text x="92" y="190" fill="#eefaff" font-size="13">毛刷可提起冲洗，污水走底排</text></svg>',
+      foam: '<svg viewBox="0 0 340 210"><rect x="45" y="25" width="250" height="160" rx="12" fill="#12334c" stroke="#8bd7f7"/><path d="M60 70H280V170H60Z" fill="rgba(35,163,219,.65)"/><rect x="105" y="62" width="46" height="100" rx="8" fill="rgba(255,209,102,.38)" stroke="#ffd166"/><rect x="170" y="62" width="46" height="100" rx="8" fill="rgba(75,213,255,.3)" stroke="#4bd5ff"/><line x1="62" y1="48" x2="134" y2="48" stroke="#ff6b6b" stroke-width="4"/><line x1="190" y1="74" x2="280" y2="74" stroke="#ff6b6b" stroke-width="4"/><text x="80" y="190" fill="#eefaff" font-size="13">堵塞时上游水位高于下游</text></svg>',
+      bio: '<svg viewBox="0 0 340 210"><rect x="45" y="25" width="250" height="160" rx="12" fill="#12334c" stroke="#8bd7f7"/><path d="M60 70H280V170H60Z" fill="rgba(35,163,219,.65)"/><rect x="95" y="70" width="150" height="70" rx="12" fill="rgba(115,245,173,.18)" stroke="#73f5ad"/><g fill="#73f5ad"><circle cx="118" cy="92" r="8"/><circle cx="155" cy="112" r="7"/><circle cx="194" cy="91" r="8"/><circle cx="225" cy="118" r="7"/></g><ellipse cx="170" cy="160" rx="65" ry="11" fill="none" stroke="#eefaff" stroke-width="4"/><text x="88" y="190" fill="#eefaff" font-size="13">曝气供氧，硝化菌转化氨氮</text></svg>',
+      clear: '<svg viewBox="0 0 340 210"><rect x="45" y="25" width="250" height="160" rx="12" fill="#12334c" stroke="#8bd7f7"/><path d="M60 70H280V170H60Z" fill="rgba(35,163,219,.65)"/><rect x="138" y="118" width="64" height="44" rx="10" fill="#18202b" stroke="#d7e7f0"/><circle cx="170" cy="140" r="14" fill="#2b3d4e" stroke="#73f5ad" stroke-width="4"/><path d="M170 120C170 50 270 50 270 15" fill="none" stroke="#73f5ad" stroke-width="7"/><line x1="70" y1="92" x2="270" y2="92" stroke="#ff6b6b" stroke-dasharray="8 6"/><text x="87" y="190" fill="#eefaff" font-size="13">低水位保护 + 止回阀/活接</text></svg>',
+      standpipe: '<svg viewBox="0 0 340 210"><rect x="45" y="25" width="250" height="160" rx="12" fill="#12334c" stroke="#8bd7f7"/><path d="M70 165H270" stroke="#a4774b" stroke-width="8"/><path d="M110 165V62M170 165V44M230 165V88" stroke="#a4774b" stroke-width="9" stroke-linecap="round"/><path d="M70 185H285" stroke="#ffd099" stroke-width="5" marker-end="url(#m)"/><defs><marker id="m" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#ffd099"/></marker></defs><text x="82" y="202" fill="#eefaff" font-size="13">拔管后污水排向排水沟</text></svg>'
+    };
+
+    const modeText = {
+      normal: ['当前：正常循环', '水从池底进入沉淀仓，上清液逐级翻板/过水，最终由清水仓水泵回池。', '正常运行：排污总管关闭，水流按蓝色主水路和绿色回水管循环。'],
+      clean: ['当前：排污清洗', '停泵或降低流量，逐仓打开底排/拔管，沉泥和冲洗污水进入排污总管。', '排污清洗：棕色排污流线开启，先沉淀、后毛刷、再藤棉，避免污水倒灌清水仓。'],
+      clog: ['当前：堵塞预警', '藤棉仓显示上游水位升高和下游水位降低，提示滤棉堵塞或过水口受阻。', '堵塞预警：重点检查藤棉层、隔网和翻板过水口，防止水泵仓低水位。'],
+      plan: ['当前：俯视管路', '突出主水路、回水管、曝气管和排污总管的外部走向。', '俯视管路：查看管道起点、终点、流向、止回阀、活接和防虹吸位置。'],
+      section: ['当前：剖面结构', '突出水位线、仓内设备、翻板上下过水和各仓空间层次。', '剖面结构：重点观察上过/下过、折流、隔网、低水位保护和沉渣区。']
+    };
+
+    const title = document.getElementById('detailTitle');
+    const summary = document.getElementById('detailSummary');
+    const flow = document.getElementById('detailFlow');
+    const waste = document.getElementById('detailWaste');
+    const clean = document.getElementById('detailClean');
+    const problem = document.getElementById('detailProblem');
+    const mini = document.getElementById('miniDiagram');
+    const shell = document.getElementById('modelShell');
+
+    function miniFor(id) {
+      if (miniTemplates[id]) return miniTemplates[id];
+      if (id.includes('baffle') || id.includes('screen')) return '<svg viewBox="0 0 340 210"><rect x="45" y="25" width="250" height="160" rx="12" fill="#12334c" stroke="#8bd7f7"/><path d="M60 65H160V170H60Z" fill="rgba(35,163,219,.65)"/><path d="M180 92H280V170H180Z" fill="rgba(35,163,219,.45)"/><path d="M160 45H182V178H160Z" fill="#b9cad5"/><path d="M60 68C115 68 126 68 158 68" stroke="#e9fbff" stroke-width="4" stroke-dasharray="10 8"/><text x="86" y="195" fill="#eefaff" font-size="13">翻板决定上过、下过与折流防短路</text></svg>';
+      if (id.includes('pipe') || id.includes('drain') || id.includes('main')) return '<svg viewBox="0 0 340 210"><path d="M45 105C110 45 190 165 295 78" fill="none" stroke="#55d7ff" stroke-width="12" stroke-linecap="round"/><path d="M45 105C110 45 190 165 295 78" fill="none" stroke="#eefaff" stroke-width="4" stroke-dasharray="14 12"/><text x="68" y="185" fill="#eefaff" font-size="13">点击管路查看起点、终点、流向与检修方式</text></svg>';
+      return miniTemplates.settle;
+    }
+
+    function select(id) {
+      const d = details[id] || details.settle;
+      [title.textContent, summary.textContent, flow.textContent, waste.textContent, clean.textContent, problem.textContent] = d;
+      mini.innerHTML = miniFor(id);
+      document.querySelectorAll('.clickable').forEach(el => el.classList.toggle('active', el.dataset.id === id));
+    }
+
+    document.querySelectorAll('.clickable').forEach(el => el.addEventListener('click', () => select(el.dataset.id)));
+    document.querySelectorAll('[data-mode]').forEach(btn => btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('active', b === btn));
+      shell.className = `drawing-wrap mode-${mode}`;
+      document.getElementById('modeBadge').textContent = modeText[mode][0];
+      document.getElementById('modeHint').textContent = modeText[mode][1];
+      document.getElementById('modeNotice').textContent = modeText[mode][2];
+    }));
+
+    select('settle');
+  </script>
+</body>
+</html>
